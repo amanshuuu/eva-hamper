@@ -1,0 +1,31 @@
+name = "eva-hampers"
+compatibility_date = "2026-06-01"
+pages_build_output_dir = "dist"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "eva-hampers-db"
+# Set after `npx wrangler d1 create eva-hampers-db`
+database_id = ""
+
+[[r2_buckets]]
+binding = "R2"
+bucket_name = "eva-hampers-images"
+
+[vars]
+RAZORPAY_KEY_ID = ""
+RAZORPAY_KEY_SECRET = ""
+RAZORPAY_WEBHOOK_SECRET = ""
+CLOUDFLARE_ACCESS_TEAM = ""
+APP_URL = "https://eva-hampers.pages.dev"
+
+[pages]
+build_command = "npm run build"
+build_output_dir = "dist"
+
+[[pages.routes]]
+pattern = "/api/*"
+zone_id = ""
+
+[[triggers]]
+crons = ["0 2 * * *"]

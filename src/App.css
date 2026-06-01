@@ -1,0 +1,1 @@
+.app {  display: flex;  flex-direction: column;  min-height: 100vh;}.app-main {  flex: 1;}@media (max-width: 768px) {  .app-main {    padding-bottom: 60px;  }}

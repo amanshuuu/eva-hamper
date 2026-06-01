@@ -1,0 +1,13 @@
+.wishlist-page { padding-top: 40px; padding-bottom: 80px; min-height: 60vh; }
+.wishlist-title { font-family: var(--font-serif); font-size: 28px; font-weight: 700; margin-bottom: 32px; }
+.wishlist-empty { text-align: center; padding: 80px 20px; }
+.wishlist-empty p { color: var(--text-muted); margin-bottom: 24px; }
+.wishlist-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 24px; }
+.wishlist-card { border: 1px solid #eee; border-radius: var(--radius-card); overflow: hidden; background: #fff; }
+.wishlist-card img { width: 100%; aspect-ratio: 1; object-fit: cover; }
+.wishlist-card-info { padding: 12px 16px; }
+.wishlist-name { font-weight: 600; font-size: 14px; color: var(--text-dark); display: block; margin-bottom: 4px; }
+.wishlist-price { font-size: 16px; font-weight: 700; color: var(--gold); }
+.wishlist-remove { width: 100%; padding: 10px; background: var(--cream); border: none; border-top: 1px solid #eee; color: var(--text-muted); font-size: 13px; cursor: pointer; }
+.wishlist-remove:hover { background: var(--cream-dark); color: var(--red-hero); }
+@media (max-width: 480px) { .wishlist-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; } }
