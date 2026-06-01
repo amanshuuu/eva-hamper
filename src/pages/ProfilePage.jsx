@@ -184,9 +184,7 @@ export default function ProfilePage() {
           </div>
           <div className="profile-card">
             <h3><IconChat size={16} /> Get in Touch</h3>
-            <p className="profile-contact">hello@eva.in</p>
-            <p className="profile-contact">+91 98765 43210</p>
-            <p className="profile-contact">EVA Gifting, 42 MG Road, Bangalore 560001</p>
+
           </div>
         </aside>
       </div>

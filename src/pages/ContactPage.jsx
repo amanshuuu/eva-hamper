@@ -52,18 +52,7 @@ export default function ContactPage() {
           )}
         </form>
         <aside className="contact-info">
-          <div className="contact-info-card">
-            <h4>Email</h4>
-            <p>hello@eva.in</p>
-          </div>
-          <div className="contact-info-card">
-            <h4>Phone</h4>
-            <p>+91 98765 43210</p>
-          </div>
-          <div className="contact-info-card">
-            <h4>Address</h4>
-            <p>EVA Gifting, 42 MG Road,<br />Bangalore, Karnataka 560001,<br />India</p>
-          </div>
+
           <div className="contact-info-card">
             <h4>Hours</h4>
             <p>Mon - Sun: 9AM - 9PM</p>
