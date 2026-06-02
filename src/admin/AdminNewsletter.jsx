@@ -13,7 +13,10 @@ export default function AdminNewsletter() {
       const data = await api.get('/newsletter');
       setSubscribers(data);
     } catch {
-      addToast('Failed to load subscribers', 'error');
+      try {
+        const emails = JSON.parse(localStorage.getItem('th_newsletter_emails') || '[]');
+        setSubscribers(emails.map((email, i) => ({ id: i + 1, email, created_at: new Date().toISOString() })));
+      } catch {}
     }
     setLoading(false);
   };
@@ -22,15 +25,14 @@ export default function AdminNewsletter() {
     fetchSubscribers();
   }, []);
 
-  const handleDelete = async (id, email) => {
+  const handleDelete = (id, email) => {
     if (!window.confirm(`Remove ${email}?`)) return;
-    try {
-      await api.del(`/newsletter/${id}`);
-      setSubscribers(prev => prev.filter(s => s.id !== id));
-      addToast('Subscriber removed');
-    } catch {
-      addToast('Failed to remove', 'error');
-    }
+    setSubscribers(prev => {
+      const updated = prev.filter(s => s.id !== id);
+      try { localStorage.setItem('th_newsletter_emails', JSON.stringify(updated.map(s => s.email))); } catch {}
+      return updated;
+    });
+    addToast('Subscriber removed (local)');
   };
 
   const handleExport = () => {

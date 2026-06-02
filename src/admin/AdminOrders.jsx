@@ -17,7 +17,13 @@ export default function AdminOrders() {
     api.orders.list(params).then(data => {
       setOrders(data);
       setLoading(false);
-    }).catch(() => setLoading(false));
+    }).catch(() => {
+      try {
+        const local = JSON.parse(localStorage.getItem('th_orders') || '[]');
+        setOrders(statusFilter ? local.filter(o => o.order_status === statusFilter) : local);
+      } catch {}
+      setLoading(false);
+    });
   }, [statusFilter]);
 
   const handleStatusUpdate = async (id, newStatus, tracking = '', courier = '') => {

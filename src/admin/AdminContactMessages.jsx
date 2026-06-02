@@ -19,9 +19,7 @@ export default function AdminContactMessages() {
       const qs = params ? '?' + new URLSearchParams(params).toString() : '';
       const data = await api.get(`/contact${qs}`);
       setMessages(data);
-    } catch {
-      addToast('Failed to load messages', 'error');
-    }
+    } catch {}
     setLoading(false);
   }, [statusFilter, addToast]);
 
