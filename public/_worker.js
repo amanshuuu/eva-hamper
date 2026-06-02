@@ -25,7 +25,7 @@ export default {
       const password = formData.get('password');
       if (password === ADMIN_PASSWORD) {
         const response = Response.redirect(`${url.origin}/admin/dashboard`, 302);
-        response.headers.set('Set-Cookie', `${COOKIE_NAME}=${COOKIE_VALUE}; Path=/; HttpOnly; SameSite=Strict; Max-Age=86400`);
+        response.headers.set('Set-Cookie', `${COOKIE_NAME}=${COOKIE_VALUE}; Path=/; SameSite=Strict; Max-Age=86400`);
         return response;
       }
       return new Response(LOGIN_PAGE.replace('{{error}}', 'Incorrect password'), {

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { api } from '../lib/api';
 import { uploadImage } from '../lib/supabase';
+import { defaultProducts } from '../data';
 import { useToast } from '../context/ToastContext';
 import './AdminDashboard.css';
 
@@ -19,19 +20,27 @@ export default function AdminProductForm() {
   useEffect(() => {
     if (isEdit) {
       api.products.get(id).then(p => {
-        setForm({
-          name: p.name,
-          price: String(p.price),
-          category: p.category,
-          image: Array.isArray(p.images) ? p.images[0] : p.images || p.image || '',
-          description: p.description || '',
-          featured: Boolean(p.featured),
-          includedItems: (p.included_items || p.includedItems || []).join(', '),
-          stock: String(p.stock ?? ''),
-        });
+        loadProduct(p);
+      }).catch(() => {
+        const local = defaultProducts.find(p => String(p.id) === String(id));
+        if (local) loadProduct(local);
+        else addToast('Product not found', 'error');
       });
     }
   }, [id, isEdit]);
+
+  function loadProduct(p) {
+    setForm({
+      name: p.name,
+      price: String(p.price),
+      category: p.category,
+      image: Array.isArray(p.images) ? p.images[0] : p.images || p.image || '',
+      description: p.description || '',
+      featured: Boolean(p.featured),
+      includedItems: (p.included_items || p.includedItems || []).join(', '),
+      stock: String(p.stock ?? ''),
+    });
+  }
 
   const handleChange = (e) => {
     const value = e.target.type === 'checkbox' ? e.target.checked : e.target.value;

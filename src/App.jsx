@@ -35,7 +35,10 @@ import Analytics from './components/Analytics';
 import './App.css';
 
 function isLoggedIn() {
-  return sessionStorage.getItem('admin_auth') === 'true';
+  if (sessionStorage.getItem('admin_auth') === 'true') return true;
+  const hasCookie = document.cookie.split(';').some(c => c.trim().startsWith('admin_auth='));
+  if (hasCookie) sessionStorage.setItem('admin_auth', 'true');
+  return hasCookie;
 }
 
 function ProtectedRoute({ children }) {

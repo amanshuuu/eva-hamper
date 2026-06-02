@@ -20,7 +20,8 @@ export default function AdminLayout({ children }) {
   const handleLogout = () => {
     sessionStorage.removeItem('admin_auth');
     sessionStorage.removeItem('admin_email');
-    navigate('/admin');
+    document.cookie = 'admin_auth=; Path=/; Max-Age=0';
+    window.location.href = '/admin';
   };
 
   return (
