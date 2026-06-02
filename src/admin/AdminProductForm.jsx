@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { api } from '../lib/api';
+import { uploadImage } from '../lib/supabase';
 import { useToast } from '../context/ToastContext';
 import './AdminDashboard.css';
 
@@ -45,19 +46,12 @@ export default function AdminProductForm() {
 
     setForm(prev => ({ ...prev, image: URL.createObjectURL(file) }));
 
-    const fd = new FormData();
-    fd.append('image', file);
     try {
-      const res = await fetch('/api/upload', { method: 'POST', body: fd, credentials: 'same-origin' });
-      const data = await res.json();
-      if (data.url) {
-        setForm(prev => ({ ...prev, image: data.url }));
-        addToast('Image uploaded!');
-      } else {
-        addToast(data.error || 'Upload failed', 'error');
-      }
-    } catch {
-      addToast('Upload failed. Paste a URL instead.', 'error');
+      const url = await uploadImage(file);
+      setForm(prev => ({ ...prev, image: url }));
+      addToast('Image uploaded to Supabase!');
+    } catch (err) {
+      addToast(err.message || 'Upload failed. Paste a URL instead.', 'error');
     }
   };
 
@@ -145,7 +139,7 @@ export default function AdminProductForm() {
               <input type="file" accept="image/*" onChange={handleImageUpload} hidden />
               Choose File
             </label>
-            <span className="admin-upload-hint">or paste a URL (R2/Unsplash). Max 5MB for uploads.</span>
+            <span className="admin-upload-hint">or paste a URL directly. Max 5MB for uploads.</span>
           </div>
           <input name="image" value={form.image} onChange={handleChange} placeholder="https://images.unsplash.com/..." style={{ marginTop: 8 }} />
           {form.image && (
