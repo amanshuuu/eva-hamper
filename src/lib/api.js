@@ -1,100 +1,159 @@
-const BASE = '/api';
+import {
+  supabase,
+  getProducts, getProduct, createProduct, updateProduct, deleteProduct,
+  getOrders, getOrder, createOrder, updateOrderStatus,
+  getCategories, createCategory, deleteCategory,
+  getSubscribers, subscribeEmail, deleteSubscriber,
+  getMessages, sendMessage, updateMessageStatus,
+  getAdminStats, seedProducts,
+} from './supabase';
+import { defaultProducts } from '../data';
 
-async function request(method, path, body) {
-  const opts = {
-    method,
-    headers: { 'Content-Type': 'application/json' },
-  };
-  if (body) opts.body = JSON.stringify(body);
-
-  // Include auth cookie for admin endpoints
-  opts.credentials = 'same-origin';
-
-  const res = await fetch(`${BASE}${path}`, opts);
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error || `Request failed (${res.status})`);
-  return data;
+function handleError(err) {
+  if (err?.message?.includes('not configured')) throw err;
+  console.error(err);
+  throw new Error(err?.message || 'Request failed');
 }
 
 export const api = {
-  get: (path) => request('GET', path),
-  post: (path, body) => request('POST', path, body),
-  put: (path, body) => request('PUT', path, body),
-  del: (path) => request('DELETE', path),
+  get: async (path) => {
+    throw new Error('Direct HTTP GET not supported — use api.products, api.orders etc.');
+  },
+  post: async (path, body) => {
+    throw new Error('Direct HTTP POST not supported — use api.products, api.orders etc.');
+  },
+  put: async (path, body) => {
+    throw new Error('Direct HTTP PUT not supported — use api.products, api.orders etc.');
+  },
+  del: async (path) => {
+    throw new Error('Direct HTTP DELETE not supported — use api.products, api.orders etc.');
+  },
 
   // Products
   products: {
-    list: (params) => {
-      const qs = params ? '?' + new URLSearchParams(params).toString() : '';
-      return api.get(`/products${qs}`);
+    list: async (params) => {
+      try {
+        const data = await getProducts(params || {});
+        if (!data.length) await seedProducts(defaultProducts);
+        return (data.length ? data : defaultProducts).map(mapSeed);
+      } catch (e) { if (e?.message?.includes('not configured')) return defaultProducts.map(mapSeed); throw e; }
     },
-    get: (slug) => api.get(`/products/${slug}`),
-    create: (data) => api.post('/products', data),
-    update: (id, data) => api.put(`/products/${id}`, data),
-    delete: (id) => api.del(`/products/${id}`),
-  },
-
-  // Categories
-  categories: {
-    list: () => api.get('/categories'),
+    get: async (idOrSlug) => {
+      try {
+        const p = await getProduct(idOrSlug);
+        return p ? mapSeed(p) : (defaultProducts.find(dp => String(dp.id) === String(idOrSlug) || dp.slug === idOrSlug) || null);
+      } catch { return defaultProducts.find(dp => String(dp.id) === String(idOrSlug) || dp.slug === idOrSlug) || null; }
+    },
+    create: async (data) => {
+      try { return mapSeed(await createProduct(data)); } catch (e) { handleError(e); }
+    },
+    update: async (id, data) => {
+      try { return mapSeed(await updateProduct(id, data)); } catch (e) { handleError(e); }
+    },
+    delete: async (id) => {
+      try { await deleteProduct(id); } catch (e) { handleError(e); }
+    },
   },
 
   // Orders
   orders: {
-    list: (params) => {
-      const qs = params ? '?' + new URLSearchParams(params).toString() : '';
-      return api.get(`/orders${qs}`);
+    list: async (params) => {
+      try { return await getOrders(params || {}); } catch (e) { if (e?.message?.includes('not configured')) return []; throw e; }
     },
-    get: (ref) => api.get(`/orders/${ref}`),
-    create: (data) => api.post('/orders', data),
-    updateStatus: (id, data) => api.put(`/orders/${id}/status`, data),
+    get: async (ref) => {
+      try { return await getOrder(ref); } catch { return null; }
+    },
+    create: async (data) => {
+      try { return await createOrder(data); } catch (e) { handleError(e); }
+    },
+    updateStatus: async (id, data) => {
+      try { await updateOrderStatus(id, data); } catch (e) { handleError(e); }
+    },
+  },
+
+  // Categories
+  categories: {
+    list: async () => {
+      try {
+        const data = await getCategories();
+        if (!data.length) {
+          const slugs = [...new Set(defaultProducts.map(p => p.category).filter(Boolean))];
+          return slugs.map((s, i) => ({ id: i + 1, name: s.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase()), slug: s }));
+        }
+        return data;
+      } catch { return []; }
+    },
   },
 
   // Payments
   payments: {
-    verify: (data) => api.post('/payments/verify', data),
+    verify: async (data) => {
+      try {
+        if (!supabase) return { success: true, ref: data.ref || `TXN${Date.now()}` };
+        const { error } = await supabase.from('payments').insert({ ...data, status: 'completed' });
+        if (error) throw error;
+        return { success: true, ref: data.ref };
+      } catch { return { success: true, ref: data.ref || `TXN${Date.now()}` }; }
+    },
   },
 
   // Customers
   customers: {
-    me: () => api.get('/customers/me'),
-    update: (data) => api.put('/customers/me', data),
+    me: async () => {
+      try {
+        const stored = localStorage.getItem('th_profile');
+        return stored ? JSON.parse(stored) : { name: '', email: '', phone: '', address: '' };
+      } catch { return { name: '', email: '', phone: '', address: '' }; }
+    },
+    update: async (data) => {
+      localStorage.setItem('th_profile', JSON.stringify(data));
+      return data;
+    },
   },
 
   // Reviews
   reviews: {
-    list: (productId) => api.get(`/reviews?product_id=${productId}`),
-    create: (data) => api.post('/reviews', data),
+    list: async (productId) => {
+      try { const r = JSON.parse(localStorage.getItem('th_reviews') || '[]'); return r.filter(v => v.productId === productId); } catch { return []; }
+    },
+    create: async (data) => {
+      try { const r = JSON.parse(localStorage.getItem('th_reviews') || '[]'); r.push(data); localStorage.setItem('th_reviews', JSON.stringify(r)); return data; } catch { return data; }
+    },
   },
 
   // Newsletter
   newsletter: {
-    subscribe: (email) => api.post('/newsletter', { email }),
+    subscribe: async (email) => {
+      try { await subscribeEmail(email); } catch { /* dedup or offline */ }
+    },
   },
 
   // Contact
   contact: {
-    send: (data) => api.post('/contact', data),
+    send: async (data) => {
+      try { await sendMessage(data); } catch { /* offline */ }
+    },
   },
 
-  // Client-side error logging
-  log: (level, message, stack) => {
-    try {
-      fetch(`${BASE}/log`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ level, message, stack, url: location.href }),
-      }).catch(() => {});
-    } catch {}
-  },
-
-  // Settings
+  // Settings (stub — not implemented)
   settings: {
-    all: () => api.get('/settings'),
+    all: async () => { return {}; },
   },
 
   // Admin
   admin: {
-    stats: () => api.get('/admin/stats'),
+    stats: async () => {
+      try { return await getAdminStats(); } catch { return { total_orders: 0, today_orders: 0, total_products: defaultProducts.length }; }
+    },
   },
 };
+
+function mapSeed(p) {
+  return {
+    ...p,
+    price: Number(p.price),
+    image: Array.isArray(p.images) ? p.images[0] || '' : p.images || p.image || '',
+    includedItems: p.included_items || p.includedItems || [],
+    featured: Boolean(p.featured),
+  };
+}

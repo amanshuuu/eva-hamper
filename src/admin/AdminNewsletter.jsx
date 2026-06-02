@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { api } from '../lib/api';
 import { useToast } from '../context/ToastContext';
+import { supabase } from '../lib/supabase';
 import './AdminDashboard.css';
 
 export default function AdminNewsletter() {
@@ -8,31 +8,26 @@ export default function AdminNewsletter() {
   const [loading, setLoading] = useState(true);
   const { addToast } = useToast();
 
-  const fetchSubscribers = async () => {
-    try {
-      const data = await api.get('/newsletter');
-      setSubscribers(data);
-    } catch {
-      try {
-        const emails = JSON.parse(localStorage.getItem('th_newsletter_emails') || '[]');
-        setSubscribers(emails.map((email, i) => ({ id: i + 1, email, created_at: new Date().toISOString() })));
-      } catch {}
-    }
-    setLoading(false);
-  };
-
   useEffect(() => {
-    fetchSubscribers();
+    (async () => {
+      try {
+        if (!supabase) { setLoading(false); return; }
+        const { data } = await supabase.from('newsletter_subscribers').select('*').order('created_at', { ascending: false });
+        setSubscribers(data || []);
+      } catch {}
+      setLoading(false);
+    })();
   }, []);
 
-  const handleDelete = (id, email) => {
+  const handleDelete = async (id, email) => {
     if (!window.confirm(`Remove ${email}?`)) return;
-    setSubscribers(prev => {
-      const updated = prev.filter(s => s.id !== id);
-      try { localStorage.setItem('th_newsletter_emails', JSON.stringify(updated.map(s => s.email))); } catch {}
-      return updated;
-    });
-    addToast('Subscriber removed (local)');
+    try {
+      if (supabase) await supabase.from('newsletter_subscribers').delete().eq('id', id);
+      setSubscribers(prev => prev.filter(s => s.id !== id));
+      addToast('Subscriber removed');
+    } catch {
+      addToast('Failed to remove', 'error');
+    }
   };
 
   const handleExport = () => {

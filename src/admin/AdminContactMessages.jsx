@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback } from 'react';
-import { api } from '../lib/api';
+import { useState, useEffect } from 'react';
 import { useToast } from '../context/ToastContext';
+import { supabase } from '../lib/supabase';
 import './AdminDashboard.css';
 
 const STATUS_OPTIONS = ['new', 'replied', 'closed'];
@@ -13,24 +13,23 @@ export default function AdminContactMessages() {
   const [expanded, setExpanded] = useState(null);
   const { addToast } = useToast();
 
-  const fetchMessages = useCallback(async () => {
-    try {
-      const params = statusFilter ? { status: statusFilter } : undefined;
-      const qs = params ? '?' + new URLSearchParams(params).toString() : '';
-      const data = await api.get(`/contact${qs}`);
-      setMessages(data);
-    } catch {}
-    setLoading(false);
-  }, [statusFilter, addToast]);
-
   useEffect(() => {
-    fetchMessages();
-  }, [fetchMessages]);
+    (async () => {
+      try {
+        if (!supabase) { setLoading(false); return; }
+        let q = supabase.from('contact_messages').select('*').order('created_at', { ascending: false });
+        if (statusFilter) q = q.eq('status', statusFilter);
+        const { data } = await q;
+        setMessages(data || []);
+      } catch {}
+      setLoading(false);
+    })();
+  }, [statusFilter]);
 
   const handleStatusUpdate = async (id, status) => {
     setUpdating(id);
     try {
-      await api.put(`/contact/${id}/status`, { status });
+      if (supabase) await supabase.from('contact_messages').update({ status }).eq('id', id);
       setMessages(prev => prev.map(m => m.id === id ? { ...m, status } : m));
       addToast(`Message marked as ${status}`);
     } catch {

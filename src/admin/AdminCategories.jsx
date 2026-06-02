@@ -1,25 +1,25 @@
 import { useState, useEffect } from 'react';
-import { api } from '../lib/api';
 import { defaultProducts } from '../data';
 import { useToast } from '../context/ToastContext';
+import { supabase } from '../lib/supabase';
 import './AdminDashboard.css';
 
 const CATEGORY_LABELS = {
-  'best-seller': 'Best Seller',
-  'premium': 'Premium',
-  'birthday': 'Birthday',
-  'anniversary': 'Anniversary',
-  'valentine': 'Valentine',
-  'get-well': 'Get Well Soon',
-  'house-warming': 'House Warming',
-  'her': 'For Her',
-  'him': 'For Him',
-  'mom': 'For Mom',
-  'dad': 'For Dad',
-  'couple': 'For Couple',
-  'festival': 'Festival',
-  'wedding': 'Wedding',
+  'best-seller': 'Best Seller', 'premium': 'Premium',
+  'birthday': 'Birthday', 'anniversary': 'Anniversary',
+  'valentine': 'Valentine', 'get-well': 'Get Well Soon',
+  'house-warming': 'House Warming', 'her': 'For Her',
+  'him': 'For Him', 'mom': 'For Mom', 'dad': 'For Dad',
+  'couple': 'For Couple', 'festival': 'Festival', 'wedding': 'Wedding',
 };
+
+function catsFromProducts(products) {
+  const slugs = [...new Set(products.map(p => p.category).filter(Boolean))];
+  return slugs.map((slug, i) => ({
+    id: i + 1, name: CATEGORY_LABELS[slug] || slug.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
+    slug, count: products.filter(p => p.category === slug).length,
+  }));
+}
 
 export default function AdminCategories() {
   const [cats, setCats] = useState([]);
@@ -29,45 +29,47 @@ export default function AdminCategories() {
   const [deleting, setDeleting] = useState(null);
   const { addToast } = useToast();
 
-  function loadCats(data) {
-    const slugs = [...new Set(data.map(p => p.category).filter(Boolean))];
-    const unique = slugs.map((slug, i) => ({
-      id: i + 1,
-      name: CATEGORY_LABELS[slug] || slug.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
-      slug,
-      count: data.filter(p => p.category === slug).length,
-    }));
-    setCats(unique);
-  }
-
   useEffect(() => {
-    api.categories.list().then(data => {
-      if (data.length) loadCats(data);
-      else loadCats(defaultProducts);
+    (async () => {
+      try {
+        if (supabase) {
+          const { data } = await supabase.from('categories').select('*').order('name');
+          if (data?.length) { setCats(data); setLoading(false); return; }
+        }
+      } catch {}
+      setCats(catsFromProducts(defaultProducts));
       setLoading(false);
-    }).catch(() => {
-      loadCats(defaultProducts);
-      setLoading(false);
-    });
+    })();
   }, []);
 
-  const handleAdd = (e) => {
+  const handleAdd = async (e) => {
     e.preventDefault();
     if (!newCat.trim()) return;
     const slug = newCat.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
-    if (cats.find(c => c.slug === slug)) {
-      addToast('Category already exists', 'error');
-      return;
-    }
-    setCats(prev => [...prev, { id: Date.now(), name: newCat.trim(), slug, count: 0 }]);
-    setNewCat('');
-    addToast('Category added (local)');
+    if (cats.find(c => c.slug === slug)) { addToast('Already exists', 'error'); return; }
+    setAdding(true);
+    try {
+      if (supabase) {
+        const { data } = await supabase.from('categories').insert({ name: newCat.trim(), slug }).select().single();
+        setCats(prev => [...prev, { ...data, count: 0 }]);
+      } else {
+        setCats(prev => [...prev, { id: Date.now(), name: newCat.trim(), slug, count: 0 }]);
+      }
+      setNewCat('');
+      addToast('Category added');
+    } catch { addToast('Failed to add', 'error'); }
+    setAdding(false);
   };
 
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     if (!window.confirm('Delete this category?')) return;
-    setCats(prev => prev.filter(c => c.id !== id));
-    addToast('Category removed');
+    setDeleting(id);
+    try {
+      if (supabase) await supabase.from('categories').delete().eq('id', id);
+      setCats(prev => prev.filter(c => c.id !== id));
+      addToast('Category deleted');
+    } catch { addToast('Failed to delete', 'error'); }
+    setDeleting(null);
   };
 
   return (
