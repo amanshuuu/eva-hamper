@@ -37,7 +37,7 @@ export function ProductSchema({ product }) {
       '@type': 'Product',
       name: product.name,
       description: product.description || `${product.name} — premium gift hamper from EVA`,
-      image: product.image || 'https://images.unsplash.com/photo-1603400521630-9f2de124b33b?w=400&h=400&fit=crop',
+      image: product.image || '',
       offers: {
         '@type': 'Offer',
         price: product.price,

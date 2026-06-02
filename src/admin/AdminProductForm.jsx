@@ -66,7 +66,7 @@ export default function AdminProductForm() {
       name: form.name,
       slug: form.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''),
       price: parseFloat(form.price),
-      images: [form.image || 'https://images.unsplash.com/photo-1603400521630-9f2de124b33b?w=400&h=400&fit=crop'],
+      images: form.image ? [form.image] : [],
       category: form.category,
       description: form.description,
       featured: form.featured,
@@ -141,7 +141,7 @@ export default function AdminProductForm() {
             </label>
             <span className="admin-upload-hint">or paste a URL directly. Max 5MB for uploads.</span>
           </div>
-          <input name="image" value={form.image} onChange={handleChange} placeholder="https://images.unsplash.com/..." style={{ marginTop: 8 }} />
+          <input name="image" value={form.image} onChange={handleChange} placeholder="https://..." style={{ marginTop: 8 }} />
           {form.image && (
             <div className="admin-image-preview">
               <img src={form.image} alt="preview" />

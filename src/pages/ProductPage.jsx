@@ -82,7 +82,7 @@ export default function ProductPage() {
   const [touchStartX, setTouchStartX] = useState(null);
   const contentRef = useRef(null);
   const galleryRef = useRef(null);
-  const images = [product.image, 'https://images.unsplash.com/photo-1603400521630-9f2de124b33b?w=400&h=400&fit=crop', 'https://images.unsplash.com/photo-1607344645866-009c320b63e0?w=400&h=400&fit=crop'];
+  const images = product.image ? [product.image] : [];
 
   const handleTouchStart = (e) => setTouchStartX(e.touches[0].clientX);
   const handleTouchEnd = (e) => {
