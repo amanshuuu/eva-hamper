@@ -1,33 +1,29 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { api } from '../lib/api';
 import './AdminLogin.css';
 
 export default function AdminLogin() {
   const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!email.trim()) { setError('Email required'); return; }
-
-    try {
-      const me = await api.get('/auth/me');
-      if (me.authenticated) {
-        sessionStorage.setItem('admin_auth', 'true');
-        navigate('/admin/dashboard');
-      } else {
-        const team = import.meta.env.VITE_CLOUDFLARE_ACCESS_TEAM;
-        if (team) {
-          window.location.href = `https://${team}.cloudflareaccess.com/cdn-cgi/access/login?redirect_url=${window.location.origin}/admin/dashboard`;
-        } else {
-          setError('Configure VITE_CLOUDFLARE_ACCESS_TEAM in your environment');
-        }
-      }
-    } catch {
-      setError('Cannot connect to authentication service');
+    if (!email.trim() || !password.trim()) {
+      setError('Email and password required');
+      return;
     }
+
+    const adminPassword = import.meta.env.VITE_ADMIN_PASSWORD || 'admin123';
+    if (password !== adminPassword) {
+      setError('Invalid credentials');
+      return;
+    }
+
+    sessionStorage.setItem('admin_auth', 'true');
+    sessionStorage.setItem('admin_user', email);
+    navigate('/admin/dashboard');
   };
 
   return (
@@ -43,8 +39,14 @@ export default function AdminLogin() {
             onChange={(e) => { setEmail(e.target.value); setError(''); }}
             autoFocus
           />
+          <input
+            type="password"
+            placeholder="Password"
+            value={password}
+            onChange={(e) => { setPassword(e.target.value); setError(''); }}
+          />
           {error && <p className="admin-login-error">{error}</p>}
-          <button type="submit" className="btn btn-gold">Login with Cloudflare Access</button>
+          <button type="submit" className="btn btn-gold">Login</button>
         </form>
       </div>
     </div>
