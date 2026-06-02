@@ -37,12 +37,28 @@ export default function AdminProductForm() {
     setForm(prev => ({ ...prev, [e.target.name]: value }));
   };
 
-  const handleImageUpload = (e) => {
+  const handleImageUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
     if (!file.type.startsWith('image/')) { addToast('Only image files allowed', 'error'); return; }
     if (file.size > 5 * 1024 * 1024) { addToast('Image must be under 5MB', 'error'); return; }
+
     setForm(prev => ({ ...prev, image: URL.createObjectURL(file) }));
+
+    const fd = new FormData();
+    fd.append('image', file);
+    try {
+      const res = await fetch('/api/upload', { method: 'POST', body: fd, credentials: 'same-origin' });
+      const data = await res.json();
+      if (data.url) {
+        setForm(prev => ({ ...prev, image: data.url }));
+        addToast('Image uploaded!');
+      } else {
+        addToast(data.error || 'Upload failed', 'error');
+      }
+    } catch {
+      addToast('Upload failed. Paste a URL instead.', 'error');
+    }
   };
 
   const handleSubmit = async (e) => {

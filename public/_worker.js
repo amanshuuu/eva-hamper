@@ -7,6 +7,22 @@ export default {
     const url = new URL(request.url);
     const { pathname } = url;
 
+    if (pathname === '/api/upload' && request.method === 'POST') {
+      return handleUpload(request, env);
+    }
+
+    if (pathname.startsWith('/images/') && env.IMAGES_BUCKET) {
+      const key = pathname.replace('/images/', '');
+      const obj = await env.IMAGES_BUCKET.get(key);
+      if (obj) {
+        return new Response(obj.body, { headers: { 'Content-Type': obj.httpMetadata?.contentType || 'image/jpeg', 'Cache-Control': 'public, max-age=86400' } });
+      }
+    }
+
+    if (!pathname.startsWith('/admin') && pathname.startsWith('/api/')) {
+      return new Response(JSON.stringify({ error: 'Not found' }), { status: 404, headers: { 'Content-Type': 'application/json' } });
+    }
+
     if (!pathname.startsWith('/admin')) {
       return serveAsset(request, env);
     }
@@ -16,7 +32,7 @@ export default {
       return serveAsset(request, env);
     }
 
-    if (pathname === '/admin' && request.method === 'POST') {
+    if (pathname === '/admin/login' && request.method === 'POST') {
       const formData = await request.formData();
       const password = formData.get('password');
       if (password === ADMIN_PASSWORD) {
@@ -34,6 +50,32 @@ export default {
     });
   },
 };
+
+async function handleUpload(request, env) {
+  const cookies = request.headers.get('Cookie') || '';
+  if (!cookies.includes(`${COOKIE_NAME}=${COOKIE_VALUE}`)) {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+  }
+
+  if (!env.IMAGES_BUCKET) {
+    return new Response(JSON.stringify({ error: 'R2 bucket not configured. Add IMAGES_BUCKET binding in Cloudflare dashboard.' }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+  }
+
+  const formData = await request.formData();
+  const file = formData.get('image');
+  if (!file) {
+    return new Response(JSON.stringify({ error: 'No image file provided' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+  }
+
+  const ext = file.name.split('.').pop() || 'jpg';
+  const key = `products/${Date.now()}-${Math.random().toString(36).slice(2, 6)}.${ext}`;
+  await env.IMAGES_BUCKET.put(key, await file.arrayBuffer(), {
+    httpMetadata: { contentType: file.type },
+  });
+
+  const url = `${new URL(request.url).origin}/images/${key}`;
+  return new Response(JSON.stringify({ url }), { headers: { 'Content-Type': 'application/json' } });
+}
 
 async function serveAsset(request, env) {
   const response = await env.ASSETS.fetch(request);
